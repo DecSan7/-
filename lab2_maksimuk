@@ -1,0 +1,225 @@
+interface Logger {
+    log(message: string): void;
+}
+
+abstract class Device {
+    private battery: number;
+    private deviceType: string;
+
+    constructor(batteryLevel: number = 100, deviceType: string = "Device") {
+        this.battery = batteryLevel;
+        this.deviceType = deviceType;
+    }
+
+    protected getBatteryLevel(): number {
+        return this.battery;
+    }
+
+    protected setBatteryLevel(level: number): void {
+        this.battery = Math.max(0, Math.min(100, level));
+    }
+
+    protected consumeBattery(amount: number): void {
+        this.battery = Math.max(0, this.battery - amount);
+    }
+
+    protected chargeBattery(amount: number): void {
+        this.battery = Math.min(100, this.battery + amount);
+    }
+
+    getType(): string {
+        return this.deviceType;
+    }
+
+    abstract powerOn(): boolean;
+}
+
+class Phone extends Device implements Logger {
+    protected screenSize: number;
+    private isOn: boolean = false;
+
+    constructor(batteryLevel: number, screenSize: number) {
+        super(batteryLevel, "Phone");
+        this.screenSize = screenSize;
+    }
+
+    log(message: string): void {
+        console.log(`[Phone ${new Date().toLocaleTimeString()}]: ${message}`);
+    }
+
+    powerOn(): boolean {
+        if (this.getBatteryLevel() < 5) {
+            this.log("Battery too low to power on");
+            return false;
+        }
+
+        this.isOn = true;
+        this.consumeBattery(2);
+        this.log(`Powered on. Screen size: ${this.screenSize} inches`);
+        return true;
+    }
+
+    turnOn(): this {
+        this.powerOn();
+        return this;
+    }
+
+    turnOff(): this {
+        this.isOn = false;
+        this.log("Powered off");
+        return this;
+    }
+
+    makeCall(number: string): this {
+        if (!this.isOn) {
+            this.log("Cannot make call - device is off");
+            return this;
+        }
+        this.consumeBattery(5);
+        this.log(`Calling ${number}...`);
+        return this;
+    }
+
+    checkBattery(): this {
+        this.log(`Battery level: ${this.getBatteryLevel()}%`);
+        return this;
+    }
+}
+
+class Laptop extends Device implements Logger {
+    protected screenSize: number;
+    private isOn: boolean = false;
+    private isSleepMode: boolean = false;
+
+    constructor(batteryLevel: number, screenSize: number) {
+        super(batteryLevel, "Laptop");
+        this.screenSize = screenSize;
+    }
+
+    log(message: string): void {
+        console.log(`[Laptop ${new Date().toLocaleTimeString()}]: ${message}`);
+    }
+
+    powerOn(): boolean {
+        if (this.isSleepMode) {
+            this.isSleepMode = false;
+            this.isOn = true;
+            this.consumeBattery(1);
+            this.log("Woke up from sleep mode");
+            return true;
+        }
+
+        if (this.getBatteryLevel() < 10) {
+            this.log("Battery too low to power on");
+            return false;
+        }
+
+        this.isOn = true;
+        this.consumeBattery(5);
+        this.log(`Powered on. Screen size: ${this.screenSize} inches`);
+        return true;
+    }
+
+    start(): this {
+        this.powerOn();
+        return this;
+    }
+
+    shutdown(): this {
+        this.isOn = false;
+        this.isSleepMode = false;
+        this.log("Powered off");
+        return this;
+    }
+
+    sleep(): this {
+        if (!this.isOn) return this;
+        
+        this.isSleepMode = true;
+        this.isOn = false;
+        this.log("Entered sleep mode");
+        return this;
+    }
+
+    openProgram(programName: string): this {
+        if (!this.isOn) {
+            this.log("Cannot open program - device is off");
+            return this;
+        }
+        this.consumeBattery(2);
+        this.log(`Opening ${programName}...`);
+        return this;
+    }
+}
+
+console.log("=== Демонстрация полиморфизма и ООП принципов ===\n");
+
+const devices: Device[] = [
+    new Phone(85, 6.7),
+    new Laptop(60, 15.6),
+    new Phone(3, 6.1),
+    new Laptop(5, 13.3)
+];
+
+devices.forEach((device, index) => {
+    console.log(`Device ${index + 1} (${device.getType()}):`);
+    const success = device.powerOn();
+    console.log(`Power on ${success ? 'successful' : 'failed'}\n`);
+});
+
+console.log("=== Использование конкретных устройств ===\n");
+
+const myPhone = new Phone(75, 6.5);
+myPhone.turnOn();
+myPhone.makeCall("+1234567890");
+myPhone.turnOff();
+
+console.log();
+
+const myLaptop = new Laptop(45, 14);
+myLaptop.start();
+myLaptop.openProgram("Visual Studio Code");
+myLaptop.sleep();
+myLaptop.start(); 
+myLaptop.shutdown();
+
+console.log("\n=== Цепочка вызовов (method chaining) ===");
+const anotherPhone = new Phone(90, 6.8);
+anotherPhone.turnOn()
+    .makeCall("+9876543210")
+    .makeCall("+5555555555")
+    .checkBattery()
+    .turnOff();
+
+console.log("\n=== Использование через интерфейс Logger ===");
+const loggers: Logger[] = [
+    new Phone(100, 6.0),
+    new Laptop(100, 17.0)
+];
+
+loggers.forEach(logger => {
+    logger.log("Testing logging functionality");
+});
+
+console.log("\n=== Демонстрация работы с разными устройствами ===");
+
+function useDevice(device: Device): void {
+    console.log(`Device type: ${device.getType()}`);
+    const poweredOn = device.powerOn();
+    console.log(`Powered on: ${poweredOn}\n`);
+}
+
+useDevice(new Phone(50, 6.5));
+useDevice(new Laptop(30, 14));
+
+function testDeviceLogging(device: Device & Logger): void {
+    console.log(`\nTesting ${device.getType()} logging:`);
+    device.log("Log message 1");
+    device.log("Log message 2");
+}
+
+const phoneForTesting = new Phone(80, 6.5);
+const laptopForTesting = new Laptop(70, 15.6);
+
+testDeviceLogging(phoneForTesting);
+testDeviceLogging(laptopForTesting);
